@@ -454,10 +454,136 @@ textarea {
   transform: translateY(0);
 }
 
+.bonds-section {
+  display: grid;
+  gap: 16px;
+}
+
+.bond-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 12px;
+  padding: 16px;
+}
+
+.bond-controls label {
+  display: grid;
+  gap: 6px;
+}
+
+.bond-controls label span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.check-control {
+  align-items: center;
+  grid-template-columns: 18px minmax(0, 1fr);
+  min-height: 40px;
+  padding-top: 20px;
+}
+
+.check-control input {
+  width: 18px;
+  height: 18px;
+}
+
+.bond-disclaimer {
+  margin: 0 16px 16px;
+  border: 1px solid rgba(217, 162, 27, 0.45);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: rgba(217, 162, 27, 0.1);
+  color: #59420a;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.bond-summary {
+  margin-top: 0;
+}
+
+.bond-table {
+  min-width: 1120px;
+}
+
+.bond-lists {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.compact-list {
+  display: grid;
+  gap: 8px;
+  max-height: 420px;
+  overflow: auto;
+  padding: 14px 16px;
+}
+
+.bond-card {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.bond-card strong {
+  font-size: 14px;
+}
+
+.bond-card span,
+.bond-card p {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.bond-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bond-tag {
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: var(--panel-soft);
+  color: var(--brand-strong);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.bond-tag.warn {
+  background: rgba(186, 59, 70, 0.1);
+  color: var(--danger);
+}
+
+.risk-notes {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.risk-notes p {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
 @media (max-width: 1050px) {
   .summary-grid,
   .workbench,
-  .lower-grid {
+  .lower-grid,
+  .bond-controls,
+  .bond-lists,
+  .risk-notes {
     grid-template-columns: 1fr 1fr;
   }
 
@@ -481,7 +607,10 @@ textarea {
   .toolbar,
   .summary-grid,
   .workbench,
-  .lower-grid {
+  .lower-grid,
+  .bond-controls,
+  .bond-lists,
+  .risk-notes {
     grid-template-columns: 1fr;
   }
 

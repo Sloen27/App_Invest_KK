@@ -45,6 +45,10 @@
           <span aria-hidden="true">¤</span>
           Выплаты
         </button>
+        <button id="bondsScrollButton" type="button">
+          <span aria-hidden="true">◆</span>
+          Облигации
+        </button>
       </section>
 
       <section class="summary-grid" aria-label="Сводка">
@@ -135,6 +139,147 @@
             <button id="copyContextButton" type="button">Скопировать</button>
           </div>
           <textarea id="advisorContext" readonly></textarea>
+        </section>
+      </section>
+
+      <section class="bonds-section" id="bondsSection">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Облигации</h2>
+              <p>Подбор выпусков к ручному разбору на публичных данных MOEX ISS</p>
+            </div>
+            <button id="loadBondsButton" type="button">Обновить подбор</button>
+          </div>
+
+          <form class="bond-controls" id="bondForm">
+            <label>
+              <span>Сумма</span>
+              <input id="bondAmount" type="number" min="1000" step="1000" value="15000" />
+            </label>
+            <label>
+              <span>Риск</span>
+              <select id="bondRisk">
+                <option value="cautious">Осторожный</option>
+                <option value="balanced" selected>Сбалансированный</option>
+                <option value="income">Доходный</option>
+              </select>
+            </label>
+            <label>
+              <span>Доля ОФЗ, %</span>
+              <input id="bondOfzShare" type="number" min="0" max="100" step="5" value="65" />
+            </label>
+            <label>
+              <span>Корп. облигации, %</span>
+              <input id="bondCorporateShare" type="number" min="0" max="100" step="5" value="35" readonly />
+            </label>
+            <label>
+              <span>Макс. доля эмитента, %</span>
+              <input id="bondIssuerShare" type="number" min="1" max="50" step="1" value="7" />
+            </label>
+            <label>
+              <span>Погашение до</span>
+              <input id="bondMaturityYear" type="number" min="2026" max="2055" step="1" value="2031" />
+            </label>
+            <label class="check-control">
+              <input id="bondQualityOnly" type="checkbox" checked />
+              <span>Только качественные эмитенты</span>
+            </label>
+            <label class="check-control">
+              <input id="bondExcludeRisky" type="checkbox" checked />
+              <span>Исключить девелоперов и ВДО</span>
+            </label>
+          </form>
+
+          <div class="bond-disclaimer">
+            Это аналитический инструмент и не является индивидуальной инвестиционной рекомендацией.
+            Данные могут устаревать. Перед покупкой проверьте цену, НКД, доходность, дату погашения,
+            оферты, ликвидность, комиссии, налоги и ограничения брокера. Финальное решение принимает инвестор.
+          </div>
+        </div>
+
+        <section class="summary-grid bond-summary" aria-label="Сводка по облигациям">
+          <article class="metric">
+            <span>Оценка корзины</span>
+            <strong id="bondBasketScore">—</strong>
+          </article>
+          <article class="metric">
+            <span>Сумма к рассмотрению</span>
+            <strong id="bondInvested">—</strong>
+          </article>
+          <article class="metric">
+            <span>Остаток</span>
+            <strong id="bondReserve">—</strong>
+          </article>
+          <article class="metric">
+            <span>Средняя доходность</span>
+            <strong id="bondAverageYield">—</strong>
+          </article>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Корзина к рассмотрению</h2>
+              <p id="bondBasketMeta">Укажи параметры и обнови подбор</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="bond-table">
+              <thead>
+                <tr>
+                  <th>SECID</th>
+                  <th>Название</th>
+                  <th>Тип</th>
+                  <th>Погашение</th>
+                  <th>Купон</th>
+                  <th>Доходность</th>
+                  <th>Цена с НКД</th>
+                  <th>Ликвидность</th>
+                  <th>Риск</th>
+                  <th>Кол-во</th>
+                  <th>Сумма</th>
+                </tr>
+              </thead>
+              <tbody id="bondBasketBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="bond-lists">
+          <section class="panel">
+            <div class="panel-head compact">
+              <h2>ОФЗ к рассмотрению</h2>
+            </div>
+            <div class="compact-list" id="ofzList"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head compact">
+              <h2>Корпоративные к рассмотрению</h2>
+            </div>
+            <div class="compact-list" id="corporateList"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head compact">
+              <h2>Исключены из-за риска/ликвидности</h2>
+            </div>
+            <div class="compact-list" id="excludedBondList"></div>
+          </section>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head compact">
+            <h2>Налоги и риски</h2>
+          </div>
+          <div class="risk-notes">
+            <p>Купоны и прибыль от продажи облигаций облагаются НДФЛ.</p>
+            <p>Цена облигации может падать при росте ставок.</p>
+            <p>Корпоративные облигации несут кредитный риск эмитента.</p>
+            <p>Высокая доходность часто означает повышенный риск.</p>
+            <p>Флоатеры снижают часть процентного риска, но доходность не фиксирована навсегда.</p>
+          </div>
         </section>
       </section>
     </main>

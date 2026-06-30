@@ -5,7 +5,9 @@ const state = {
   positions: [],
   selectedInstrumentId: "",
   lastPrices: new Map(),
-  incomeEvents: []
+  incomeEvents: [],
+  bondBasket: null,
+  bondsLoading: false
 };
 
 const els = {
@@ -17,6 +19,7 @@ const els = {
   accountSelect: document.querySelector("#accountSelect"),
   refreshButton: document.querySelector("#refreshButton"),
   incomeButton: document.querySelector("#incomeButton"),
+  bondsScrollButton: document.querySelector("#bondsScrollButton"),
   positionFilter: document.querySelector("#positionFilter"),
   totalAmount: document.querySelector("#totalAmount"),
   yieldAmount: document.querySelector("#yieldAmount"),
@@ -32,6 +35,26 @@ const els = {
   incomeMeta: document.querySelector("#incomeMeta"),
   advisorContext: document.querySelector("#advisorContext"),
   copyContextButton: document.querySelector("#copyContextButton"),
+  bondsSection: document.querySelector("#bondsSection"),
+  bondForm: document.querySelector("#bondForm"),
+  loadBondsButton: document.querySelector("#loadBondsButton"),
+  bondAmount: document.querySelector("#bondAmount"),
+  bondRisk: document.querySelector("#bondRisk"),
+  bondOfzShare: document.querySelector("#bondOfzShare"),
+  bondCorporateShare: document.querySelector("#bondCorporateShare"),
+  bondIssuerShare: document.querySelector("#bondIssuerShare"),
+  bondMaturityYear: document.querySelector("#bondMaturityYear"),
+  bondQualityOnly: document.querySelector("#bondQualityOnly"),
+  bondExcludeRisky: document.querySelector("#bondExcludeRisky"),
+  bondBasketScore: document.querySelector("#bondBasketScore"),
+  bondInvested: document.querySelector("#bondInvested"),
+  bondReserve: document.querySelector("#bondReserve"),
+  bondAverageYield: document.querySelector("#bondAverageYield"),
+  bondBasketMeta: document.querySelector("#bondBasketMeta"),
+  bondBasketBody: document.querySelector("#bondBasketBody"),
+  ofzList: document.querySelector("#ofzList"),
+  corporateList: document.querySelector("#corporateList"),
+  excludedBondList: document.querySelector("#excludedBondList"),
   toast: document.querySelector("#toast")
 };
 
@@ -71,6 +94,7 @@ async function boot() {
     }
 
     hideLogin();
+    loadBondBasket().catch((error) => showBondError(error));
     setStatus(
       health.tokenConfigured ? "Токен настроен" : "Нужен токен в .env",
       health.tokenConfigured ? "ok" : "bad"
@@ -115,13 +139,45 @@ function bindEvents() {
 
   els.refreshButton.addEventListener("click", loadPortfolio);
   els.incomeButton.addEventListener("click", loadIncomeCalendar);
+  els.bondsScrollButton.addEventListener("click", () => {
+    els.bondsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   els.positionFilter.addEventListener("input", renderPositions);
   els.chartDays.addEventListener("change", loadSelectedCandles);
+  els.loadBondsButton.addEventListener("click", loadBondBasket);
+  els.bondForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    loadBondBasket();
+  });
+  els.bondOfzShare.addEventListener("input", syncBondShares);
 
   els.copyContextButton.addEventListener("click", async () => {
     await navigator.clipboard.writeText(els.advisorContext.value);
     toast("Контекст скопирован");
   });
+}
+
+async function loadBondBasket() {
+  if (state.bondsLoading) return;
+
+  state.bondsLoading = true;
+  els.loadBondsButton.disabled = true;
+  els.bondBasketMeta.textContent = "Загружаю данные MOEX ISS...";
+  renderBondLoading();
+
+  try {
+    const basket = await api("/api/bonds/basket", {
+      method: "POST",
+      body: JSON.stringify(getBondParams())
+    });
+    state.bondBasket = basket;
+    renderBondBasket();
+  } catch (error) {
+    showBondError(error);
+  } finally {
+    state.bondsLoading = false;
+    els.loadBondsButton.disabled = false;
+  }
 }
 
 async function loadAccounts() {
@@ -339,6 +395,117 @@ function renderEmptyPortfolio(message) {
   els.advisorContext.value = message;
 }
 
+function renderBondLoading() {
+  els.bondBasketScore.textContent = "—";
+  els.bondInvested.textContent = "—";
+  els.bondReserve.textContent = "—";
+  els.bondAverageYield.textContent = "—";
+  els.bondBasketBody.innerHTML = `<tr><td colspan="11"><div class="empty-state">Загружаю облигации с MOEX ISS...</div></td></tr>`;
+  els.ofzList.innerHTML = `<div class="empty-state">Загружаю ОФЗ</div>`;
+  els.corporateList.innerHTML = `<div class="empty-state">Загружаю корпоративные выпуски</div>`;
+  els.excludedBondList.innerHTML = `<div class="empty-state">Проверяю исключения</div>`;
+}
+
+function renderBondBasket() {
+  const basket = state.bondBasket;
+  if (!basket) return;
+
+  els.bondBasketScore.textContent = basket.basketScore ? `${formatNumber(basket.basketScore)} / 10` : "—";
+  els.bondInvested.textContent = formatMoney(basket.invested);
+  els.bondReserve.textContent = formatMoney(basket.reserve);
+  els.bondAverageYield.textContent = basket.averageYield ? `${formatNumber(basket.averageYield)}%` : "—";
+  els.bondBasketMeta.textContent = `${basket.suitability}. Купонный поток: ${formatMoney(basket.estimatedAnnualCoupon)} в год, если данные купонов актуальны.`;
+
+  if (!basket.items?.length) {
+    els.bondBasketBody.innerHTML = `<tr><td colspan="11"><div class="empty-state">Корзина не собрана по текущим фильтрам</div></td></tr>`;
+  } else {
+    els.bondBasketBody.innerHTML = basket.items.map(renderBondBasketRow).join("");
+  }
+
+  els.ofzList.innerHTML = renderBondCards(basket.candidates?.ofz || [], "ofz");
+  els.corporateList.innerHTML = renderBondCards(basket.candidates?.corporate || [], "corporate");
+  els.excludedBondList.innerHTML = renderExcludedBondCards(basket.candidates?.excluded || [], basket.warnings || []);
+}
+
+function renderBondBasketRow(bond) {
+  return `
+    <tr>
+      <td class="num">${escapeHtml(bond.secid)}</td>
+      <td>
+        <div class="instrument">
+          <strong>${escapeHtml(bond.shortName || bond.name)}</strong>
+          <span>${escapeHtml(bond.issuer)} · оценка ${formatNumber(bond.score)}/10</span>
+        </div>
+      </td>
+      <td>${escapeHtml(bond.type)}</td>
+      <td class="num">${formatDate(bond.maturityDate)}</td>
+      <td class="num">${formatMoney(bond.couponValue)} / ${formatNumber(bond.couponPercent)}%</td>
+      <td class="num">${formatNumber(bond.yield)}%</td>
+      <td class="num">${formatMoney(bond.unitCost)}</td>
+      <td class="num">${formatLiquidity(bond)}</td>
+      <td>${renderRiskTags(bond)}</td>
+      <td class="num">${formatNumber(bond.quantity)}</td>
+      <td class="num">${formatMoney(bond.estimatedTotal)}</td>
+    </tr>
+  `;
+}
+
+function renderBondCards(bonds) {
+  if (!bonds.length) return `<div class="empty-state">Нет бумаг по текущим фильтрам</div>`;
+
+  return bonds
+    .slice(0, 12)
+    .map(
+      (bond) => `
+        <article class="bond-card">
+          <strong>${escapeHtml(bond.secid)} · ${escapeHtml(bond.shortName || bond.name)}</strong>
+          <span>${escapeHtml(bond.type)} · погашение ${formatDate(bond.maturityDate)}</span>
+          <div class="bond-tags">
+            <span class="bond-tag">${formatNumber(bond.yield)}%</span>
+            <span class="bond-tag">${formatMoney(bond.unitCost)}</span>
+            <span class="bond-tag">оценка ${formatNumber(bond.score)}/10</span>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function renderExcludedBondCards(bonds, warnings) {
+  const warningHtml = warnings.length
+    ? warnings
+        .slice(0, 6)
+        .map((warning) => `<article class="bond-card"><strong>Предупреждение</strong><p>${escapeHtml(warning)}</p></article>`)
+        .join("")
+    : "";
+
+  const bondsHtml = bonds
+    .slice(0, 12)
+    .map(
+      (bond) => `
+        <article class="bond-card">
+          <strong>${escapeHtml(bond.secid)} · ${escapeHtml(bond.shortName || bond.name)}</strong>
+          <span>${escapeHtml(bond.issuer || "Эмитент не определен")}</span>
+          <div class="bond-tags">
+            ${(bond.reasons || []).slice(0, 3).map((reason) => `<span class="bond-tag warn">${escapeHtml(reason)}</span>`).join("")}
+          </div>
+        </article>
+      `
+    )
+    .join("");
+
+  return warningHtml || bondsHtml ? `${warningHtml}${bondsHtml}` : `<div class="empty-state">Исключений нет</div>`;
+}
+
+function showBondError(error) {
+  els.bondBasketMeta.textContent = "Не удалось загрузить облигации";
+  els.bondBasketBody.innerHTML = `<tr><td colspan="11"><div class="empty-state">${escapeHtml(error.message)}</div></td></tr>`;
+  els.ofzList.innerHTML = `<div class="empty-state">MOEX ISS недоступен или вернул ошибку</div>`;
+  els.corporateList.innerHTML = `<div class="empty-state">Попробуй обновить подбор позже</div>`;
+  els.excludedBondList.innerHTML = `<div class="empty-state">Нет данных</div>`;
+  toast(error.message);
+}
+
 function drawAllocation() {
   const canvas = els.allocationCanvas;
   const ctx = canvas.getContext("2d");
@@ -512,6 +679,46 @@ async function api(path, options = {}) {
   }
 
   return data;
+}
+
+function getBondParams() {
+  syncBondShares();
+  return {
+    amount: Number(els.bondAmount.value || 15000),
+    riskProfile: els.bondRisk.value,
+    ofzShare: Number(els.bondOfzShare.value || 65),
+    corporateShare: Number(els.bondCorporateShare.value || 35),
+    maxIssuerShare: Number(els.bondIssuerShare.value || 7),
+    maxMaturityYear: Number(els.bondMaturityYear.value || 2031),
+    qualityOnly: els.bondQualityOnly.checked,
+    excludeDevelopers: els.bondExcludeRisky.checked
+  };
+}
+
+function syncBondShares() {
+  const ofzShare = Math.min(100, Math.max(0, Number(els.bondOfzShare.value || 0)));
+  els.bondOfzShare.value = String(ofzShare);
+  els.bondCorporateShare.value = String(100 - ofzShare);
+}
+
+function renderRiskTags(bond) {
+  const tags = [];
+  if (bond.kind === "ofz") tags.push("ОФЗ");
+  if (bond.isQualityIssuer) tags.push("whitelist");
+  if (bond.isFloater) tags.push("флоатер");
+  for (const flag of bond.riskFlags || []) tags.push(flag);
+
+  return `
+    <div class="bond-tags">
+      ${tags.slice(0, 4).map((tag) => `<span class="bond-tag ${(tag.includes("риск") || tag.includes("доходность")) ? "warn" : ""}">${escapeHtml(tag)}</span>`).join("") || `<span class="bond-tag">без флагов</span>`}
+    </div>
+  `;
+}
+
+function formatLiquidity(bond) {
+  const turnover = bond.turnover ? formatMoney(bond.turnover) : "—";
+  const trades = bond.numTrades ? `${formatNumber(bond.numTrades)} сделок` : "нет сделок";
+  return `${turnover}, ${trades}`;
 }
 
 function moneyValue(value) {
