@@ -127,6 +127,23 @@
               <p id="incomeMeta">Купоны и дивиденды по текущему портфелю</p>
             </div>
           </div>
+          <div class="income-summary" id="incomeSummary">
+            <article>
+              <span>Ближайшая</span>
+              <strong id="incomeNextAmount">—</strong>
+              <small id="incomeNextDate">—</small>
+            </article>
+            <article>
+              <span>30 дней</span>
+              <strong id="incomeMonthAmount">—</strong>
+              <small id="incomeMonthCount">—</small>
+            </article>
+            <article>
+              <span>12 месяцев</span>
+              <strong id="incomeYearAmount">—</strong>
+              <small id="incomeYearCount">—</small>
+            </article>
+          </div>
           <div id="incomeList" class="income-list"></div>
         </section>
 
@@ -224,25 +241,25 @@
               <p id="bondBasketMeta">Укажи параметры и обнови подбор</p>
             </div>
           </div>
-          <div class="table-wrap">
-            <table class="bond-table">
-              <thead>
-                <tr>
-                  <th>SECID</th>
-                  <th>Название</th>
-                  <th>Тип</th>
-                  <th>Погашение</th>
-                  <th>Купон</th>
-                  <th>Доходность</th>
-                  <th>Цена с НКД</th>
-                  <th>Ликвидность</th>
-                  <th>Риск</th>
-                  <th>Кол-во</th>
-                  <th>Сумма</th>
-                </tr>
-              </thead>
-              <tbody id="bondBasketBody"></tbody>
-            </table>
+          <div class="bond-action-summary" id="bondActionSummary">
+            <article>
+              <span>Главный ориентир</span>
+              <strong id="bondBestWindow">—</strong>
+              <small id="bondBestWindowDetail">После выплаты купона НКД обычно ниже</small>
+            </article>
+            <article>
+              <span>Бумаги</span>
+              <strong id="bondItemsCount">—</strong>
+              <small>ОФЗ + корпоративные</small>
+            </article>
+            <article>
+              <span>Купоны в год</span>
+              <strong id="bondCouponFlow">—</strong>
+              <small>Если календарь и купоны актуальны</small>
+            </article>
+          </div>
+          <div class="bond-basket-cards" id="bondBasketCards">
+            <div class="empty-state">Укажи параметры и обнови подбор</div>
           </div>
         </section>
 

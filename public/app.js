@@ -33,6 +33,12 @@ const els = {
   chartDays: document.querySelector("#chartDays"),
   incomeList: document.querySelector("#incomeList"),
   incomeMeta: document.querySelector("#incomeMeta"),
+  incomeNextAmount: document.querySelector("#incomeNextAmount"),
+  incomeNextDate: document.querySelector("#incomeNextDate"),
+  incomeMonthAmount: document.querySelector("#incomeMonthAmount"),
+  incomeMonthCount: document.querySelector("#incomeMonthCount"),
+  incomeYearAmount: document.querySelector("#incomeYearAmount"),
+  incomeYearCount: document.querySelector("#incomeYearCount"),
   advisorContext: document.querySelector("#advisorContext"),
   copyContextButton: document.querySelector("#copyContextButton"),
   bondsSection: document.querySelector("#bondsSection"),
@@ -51,7 +57,11 @@ const els = {
   bondReserve: document.querySelector("#bondReserve"),
   bondAverageYield: document.querySelector("#bondAverageYield"),
   bondBasketMeta: document.querySelector("#bondBasketMeta"),
-  bondBasketBody: document.querySelector("#bondBasketBody"),
+  bondBestWindow: document.querySelector("#bondBestWindow"),
+  bondBestWindowDetail: document.querySelector("#bondBestWindowDetail"),
+  bondItemsCount: document.querySelector("#bondItemsCount"),
+  bondCouponFlow: document.querySelector("#bondCouponFlow"),
+  bondBasketCards: document.querySelector("#bondBasketCards"),
   ofzList: document.querySelector("#ofzList"),
   corporateList: document.querySelector("#corporateList"),
   excludedBondList: document.querySelector("#excludedBondList"),
@@ -361,10 +371,12 @@ function renderIncomeCalendar() {
   if (!state.incomeEvents.length) {
     els.incomeMeta.textContent = "Выплаты на ближайший год не найдены";
     els.incomeList.innerHTML = `<div class="empty-state">Пока пусто</div>`;
+    renderIncomeSummary([]);
     return;
   }
 
   els.incomeMeta.textContent = `${state.incomeEvents.length} событий на ближайший год`;
+  renderIncomeSummary(state.incomeEvents);
   els.incomeList.innerHTML = state.incomeEvents
     .slice(0, 80)
     .map((event) => {
@@ -374,7 +386,7 @@ function renderIncomeCalendar() {
           <div class="income-kind">${event.kind === "coupon" ? "Купон" : "Дивиденд"}</div>
           <div>
             <strong>${escapeHtml(event.instrument)}</strong>
-            <p>${formatDate(event.date)}</p>
+            <p>${formatDate(event.date)} · ${formatNumber(event.quantity || 0)} шт.</p>
           </div>
           <div class="num">${amount ? formatMoney(amount) : "—"}</div>
         </div>
@@ -392,7 +404,25 @@ function renderEmptyPortfolio(message) {
   els.positionsMeta.textContent = message;
   els.positionsBody.innerHTML = `<tr><td colspan="6"><div class="empty-state">${escapeHtml(message)}</div></td></tr>`;
   els.incomeList.innerHTML = `<div class="empty-state">Календарь выплат появится после загрузки портфеля</div>`;
+  renderIncomeSummary([]);
   els.advisorContext.value = message;
+}
+
+function renderIncomeSummary(events) {
+  const now = new Date();
+  const monthEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const yearEnd = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+  const futureEvents = events.filter((event) => new Date(event.date) >= startOfDay(now));
+  const monthEvents = futureEvents.filter((event) => new Date(event.date) <= monthEnd);
+  const yearEvents = futureEvents.filter((event) => new Date(event.date) <= yearEnd);
+  const next = futureEvents[0];
+
+  els.incomeNextAmount.textContent = next ? formatMoney(moneyValue(next.amount)) : "—";
+  els.incomeNextDate.textContent = next ? `${formatDate(next.date)} · ${next.instrument}` : "нет данных";
+  els.incomeMonthAmount.textContent = formatMoney(sumEventAmounts(monthEvents));
+  els.incomeMonthCount.textContent = `${monthEvents.length} выплат`;
+  els.incomeYearAmount.textContent = formatMoney(sumEventAmounts(yearEvents));
+  els.incomeYearCount.textContent = `${yearEvents.length} выплат`;
 }
 
 function renderBondLoading() {
@@ -400,7 +430,11 @@ function renderBondLoading() {
   els.bondInvested.textContent = "—";
   els.bondReserve.textContent = "—";
   els.bondAverageYield.textContent = "—";
-  els.bondBasketBody.innerHTML = `<tr><td colspan="11"><div class="empty-state">Загружаю облигации с MOEX ISS...</div></td></tr>`;
+  els.bondBestWindow.textContent = "—";
+  els.bondBestWindowDetail.textContent = "Загружаю календарь купонов";
+  els.bondItemsCount.textContent = "—";
+  els.bondCouponFlow.textContent = "—";
+  els.bondBasketCards.innerHTML = `<div class="empty-state">Загружаю облигации с MOEX ISS...</div>`;
   els.ofzList.innerHTML = `<div class="empty-state">Загружаю ОФЗ</div>`;
   els.corporateList.innerHTML = `<div class="empty-state">Загружаю корпоративные выпуски</div>`;
   els.excludedBondList.innerHTML = `<div class="empty-state">Проверяю исключения</div>`;
@@ -415,11 +449,12 @@ function renderBondBasket() {
   els.bondReserve.textContent = formatMoney(basket.reserve);
   els.bondAverageYield.textContent = basket.averageYield ? `${formatNumber(basket.averageYield)}%` : "—";
   els.bondBasketMeta.textContent = `${basket.suitability}. Купонный поток: ${formatMoney(basket.estimatedAnnualCoupon)} в год, если данные купонов актуальны.`;
+  renderBondActionSummary(basket);
 
   if (!basket.items?.length) {
-    els.bondBasketBody.innerHTML = `<tr><td colspan="11"><div class="empty-state">Корзина не собрана по текущим фильтрам</div></td></tr>`;
+    els.bondBasketCards.innerHTML = `<div class="empty-state">Корзина не собрана по текущим фильтрам</div>`;
   } else {
-    els.bondBasketBody.innerHTML = basket.items.map(renderBondBasketRow).join("");
+    els.bondBasketCards.innerHTML = basket.items.map(renderBondBasketCard).join("");
   }
 
   els.ofzList.innerHTML = renderBondCards(basket.candidates?.ofz || [], "ofz");
@@ -427,26 +462,72 @@ function renderBondBasket() {
   els.excludedBondList.innerHTML = renderExcludedBondCards(basket.candidates?.excluded || [], basket.warnings || []);
 }
 
-function renderBondBasketRow(bond) {
+function renderBondActionSummary(basket) {
+  const items = basket.items || [];
+  const waitItems = items.filter((item) => item.buyWindow?.tone === "wait");
+  const watchItems = items.filter((item) => item.buyWindow?.tone === "watch");
+  const best = waitItems[0] || watchItems[0] || items[0];
+
+  els.bondBestWindow.textContent = best?.buyWindow?.label || "Проверить вручную";
+  els.bondBestWindowDetail.textContent =
+    best?.buyWindow?.detail || "Сверь НКД, ближайший купон и оферты перед покупкой.";
+  els.bondItemsCount.textContent = String(items.length || "—");
+  els.bondCouponFlow.textContent = formatMoney(basket.estimatedAnnualCoupon || 0);
+}
+
+function renderBondBasketCard(bond) {
+  const timingTone = bond.buyWindow?.tone || "warn";
+  const timingLabel = bond.buyWindow?.label || "Проверить вручную";
+  const timingDetail = bond.buyWindow?.detail || "Проверьте календарь купонов у брокера.";
+  const nextCoupon = bond.nextCoupon?.date
+    ? `${formatDate(bond.nextCoupon.date)} · ${formatMoney(bond.nextCoupon.value || bond.couponValue)}`
+    : "нет данных";
+
   return `
-    <tr>
-      <td class="num">${escapeHtml(bond.secid)}</td>
-      <td>
-        <div class="instrument">
-          <strong>${escapeHtml(bond.shortName || bond.name)}</strong>
-          <span>${escapeHtml(bond.issuer)} · оценка ${formatNumber(bond.score)}/10</span>
+    <article class="basket-card">
+      <div class="basket-card-main">
+        <div>
+          <div class="bond-card-title">
+            <strong>${escapeHtml(bond.shortName || bond.name)}</strong>
+            <span>${escapeHtml(bond.secid)}</span>
+          </div>
+          <p>${escapeHtml(bond.issuer)} · ${escapeHtml(bond.type)}</p>
         </div>
-      </td>
-      <td>${escapeHtml(bond.type)}</td>
-      <td class="num">${formatDate(bond.maturityDate)}</td>
-      <td class="num">${formatMoney(bond.couponValue)} / ${formatNumber(bond.couponPercent)}%</td>
-      <td class="num">${formatNumber(bond.yield)}%</td>
-      <td class="num">${formatMoney(bond.unitCost)}</td>
-      <td class="num">${formatLiquidity(bond)}</td>
-      <td>${renderRiskTags(bond)}</td>
-      <td class="num">${formatNumber(bond.quantity)}</td>
-      <td class="num">${formatMoney(bond.estimatedTotal)}</td>
-    </tr>
+        <div class="basket-card-total">
+          <strong>${formatMoney(bond.estimatedTotal)}</strong>
+          <span>${formatNumber(bond.quantity)} шт. · ${formatMoney(bond.unitCost)} за шт.</span>
+        </div>
+      </div>
+      <div class="basket-card-grid">
+        <div>
+          <span>Когда смотреть</span>
+          <strong class="timing-${escapeHtml(timingTone)}">${escapeHtml(timingLabel)}</strong>
+          <small>${escapeHtml(timingDetail)}</small>
+        </div>
+        <div>
+          <span>Ближайший купон</span>
+          <strong>${escapeHtml(nextCoupon)}</strong>
+          <small>После выплаты НКД обычно становится ниже</small>
+        </div>
+        <div>
+          <span>Доходность / оценка</span>
+          <strong>${formatNumber(bond.yield)}% · ${formatNumber(bond.score)}/10</strong>
+          <small>Не гарантия доходности</small>
+        </div>
+        <div>
+          <span>Ликвидность</span>
+          <strong>${formatLiquidityShort(bond)}</strong>
+          <small>${formatDate(bond.maturityDate)} погашение</small>
+        </div>
+      </div>
+      <details class="basket-details">
+        <summary>Детали и риски</summary>
+        <div class="basket-detail-body">
+          <p>Купон: ${formatMoney(bond.couponValue)} / ${formatNumber(bond.couponPercent)}%. НКД: ${formatMoney(bond.accruedInt)}. Оборот: ${formatMoney(bond.turnover)}.</p>
+          ${renderRiskTags(bond)}
+        </div>
+      </details>
+    </article>
   `;
 }
 
@@ -499,7 +580,9 @@ function renderExcludedBondCards(bonds, warnings) {
 
 function showBondError(error) {
   els.bondBasketMeta.textContent = "Не удалось загрузить облигации";
-  els.bondBasketBody.innerHTML = `<tr><td colspan="11"><div class="empty-state">${escapeHtml(error.message)}</div></td></tr>`;
+  els.bondBasketCards.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+  els.bondBestWindow.textContent = "Ошибка";
+  els.bondBestWindowDetail.textContent = "MOEX ISS недоступен или вернул ошибку";
   els.ofzList.innerHTML = `<div class="empty-state">MOEX ISS недоступен или вернул ошибку</div>`;
   els.corporateList.innerHTML = `<div class="empty-state">Попробуй обновить подбор позже</div>`;
   els.excludedBondList.innerHTML = `<div class="empty-state">Нет данных</div>`;
@@ -719,6 +802,22 @@ function formatLiquidity(bond) {
   const turnover = bond.turnover ? formatMoney(bond.turnover) : "—";
   const trades = bond.numTrades ? `${formatNumber(bond.numTrades)} сделок` : "нет сделок";
   return `${turnover}, ${trades}`;
+}
+
+function formatLiquidityShort(bond) {
+  if (bond.numTrades) return `${formatNumber(bond.numTrades)} сделок`;
+  if (bond.turnover) return formatMoney(bond.turnover);
+  return "нет данных";
+}
+
+function sumEventAmounts(events) {
+  return events.reduce((sum, event) => sum + moneyValue(event.amount), 0);
+}
+
+function startOfDay(date) {
+  const copy = new Date(date);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
 }
 
 function moneyValue(value) {

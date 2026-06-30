@@ -393,6 +393,32 @@ canvas {
   padding: 14px 16px;
 }
 
+.income-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px 16px 0;
+}
+
+.income-summary article {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+
+.income-summary span,
+.income-summary small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.income-summary strong {
+  font-size: 18px;
+}
+
 .income-item {
   display: grid;
   grid-template-columns: 96px minmax(0, 1fr) auto;
@@ -503,8 +529,134 @@ textarea {
   margin-top: 0;
 }
 
-.bond-table {
-  min-width: 1120px;
+.bond-action-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(160px, 0.5fr) minmax(190px, 0.6fr);
+  gap: 10px;
+  padding: 14px 16px 0;
+}
+
+.bond-action-summary article {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+
+.bond-action-summary span,
+.bond-action-summary small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.bond-action-summary strong {
+  font-size: 18px;
+}
+
+.bond-basket-cards {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+
+.basket-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: #fff;
+}
+
+.basket-card-main,
+.basket-card-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.basket-card-main {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.bond-card-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.bond-card-title strong {
+  font-size: 17px;
+}
+
+.bond-card-title span,
+.basket-card p,
+.basket-card small,
+.basket-card-grid span,
+.basket-card-total span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.basket-card-total {
+  display: grid;
+  gap: 4px;
+  text-align: right;
+}
+
+.basket-card-total strong {
+  font-size: 20px;
+}
+
+.basket-card-grid {
+  grid-template-columns: 1.25fr 1fr 1fr 1fr;
+}
+
+.basket-card-grid > div {
+  display: grid;
+  gap: 5px;
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--panel-soft);
+}
+
+.basket-card-grid strong {
+  font-size: 14px;
+}
+
+.timing-ok {
+  color: var(--good);
+}
+
+.timing-watch {
+  color: #80600f;
+}
+
+.timing-wait,
+.timing-warn {
+  color: var(--danger);
+}
+
+.basket-details {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.basket-details summary {
+  color: var(--brand-strong);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.basket-detail-body {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
 }
 
 .bond-lists {
@@ -581,6 +733,9 @@ textarea {
   .summary-grid,
   .workbench,
   .lower-grid,
+  .income-summary,
+  .bond-action-summary,
+  .basket-card-grid,
   .bond-controls,
   .bond-lists,
   .risk-notes {
@@ -608,6 +763,10 @@ textarea {
   .summary-grid,
   .workbench,
   .lower-grid,
+  .income-summary,
+  .bond-action-summary,
+  .basket-card-main,
+  .basket-card-grid,
   .bond-controls,
   .bond-lists,
   .risk-notes {
@@ -642,5 +801,9 @@ textarea {
 
   .income-item {
     grid-template-columns: 1fr;
+  }
+
+  .basket-card-total {
+    text-align: left;
   }
 }
