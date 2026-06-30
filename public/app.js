@@ -7,8 +7,11 @@ const state = {
   lastPrices: new Map(),
   incomeEvents: [],
   bondBasket: null,
+  bondReminders: [],
   bondsLoading: false
 };
+
+const BOND_REMINDERS_KEY = "t_invest_bond_reminders_v1";
 
 const els = {
   loginScreen: document.querySelector("#loginScreen"),
@@ -62,6 +65,7 @@ const els = {
   bondItemsCount: document.querySelector("#bondItemsCount"),
   bondCouponFlow: document.querySelector("#bondCouponFlow"),
   bondBasketCards: document.querySelector("#bondBasketCards"),
+  bondRemindersList: document.querySelector("#bondRemindersList"),
   ofzList: document.querySelector("#ofzList"),
   corporateList: document.querySelector("#corporateList"),
   excludedBondList: document.querySelector("#excludedBondList"),
@@ -87,7 +91,9 @@ const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
 init();
 
 async function init() {
+  state.bondReminders = loadBondReminders();
   bindEvents();
+  renderBondReminders();
   drawEmptyCharts();
   await boot();
 }
@@ -155,6 +161,8 @@ function bindEvents() {
   els.positionFilter.addEventListener("input", renderPositions);
   els.chartDays.addEventListener("change", loadSelectedCandles);
   els.loadBondsButton.addEventListener("click", loadBondBasket);
+  els.bondBasketCards.addEventListener("click", handleBondBasketAction);
+  els.bondRemindersList.addEventListener("click", handleBondReminderAction);
   els.bondForm.addEventListener("submit", (event) => {
     event.preventDefault();
     loadBondBasket();
@@ -482,6 +490,8 @@ function renderBondBasketCard(bond) {
   const nextCoupon = bond.nextCoupon?.date
     ? `${formatDate(bond.nextCoupon.date)} · ${formatMoney(bond.nextCoupon.value || bond.couponValue)}`
     : "нет данных";
+  const reminderDate = bond.reminder?.date ? formatDate(bond.reminder.date) : "нет даты";
+  const reminderDisabled = bond.reminder?.date ? "" : "disabled";
 
   return `
     <article class="basket-card">
@@ -520,6 +530,19 @@ function renderBondBasketCard(bond) {
           <small>${formatDate(bond.maturityDate)} погашение</small>
         </div>
       </div>
+      <div class="basket-actions">
+        <div>
+          <span>Напоминание</span>
+          <strong>${escapeHtml(reminderDate)}</strong>
+          <small>${escapeHtml(bond.reminder?.note || "Нет даты купона для автоматического напоминания.")}</small>
+        </div>
+        <button type="button" data-action="save-bond-reminder" data-secid="${escapeHtml(bond.secid)}" ${reminderDisabled}>
+          Напомнить
+        </button>
+        <button type="button" class="secondary-button" data-action="download-bond-ics" data-secid="${escapeHtml(bond.secid)}" ${reminderDisabled}>
+          Apple Calendar
+        </button>
+      </div>
       <details class="basket-details">
         <summary>Детали и риски</summary>
         <div class="basket-detail-body">
@@ -529,6 +552,172 @@ function renderBondBasketCard(bond) {
       </details>
     </article>
   `;
+}
+
+function handleBondBasketAction(event) {
+  const button = event.target.closest("[data-action]");
+  if (!button) return;
+
+  const bond = findBasketBond(button.dataset.secid);
+  const reminder = buildBondReminder(bond);
+
+  if (!reminder) {
+    toast("Для этой облигации нет даты купона для напоминания.");
+    return;
+  }
+
+  if (button.dataset.action === "save-bond-reminder") {
+    upsertBondReminder(reminder);
+    toast("Напоминание добавлено в список.");
+  }
+
+  if (button.dataset.action === "download-bond-ics") {
+    downloadReminderIcs(reminder);
+    toast("Файл календаря скачан. Открой его в Apple Calendar.");
+  }
+}
+
+function handleBondReminderAction(event) {
+  const button = event.target.closest("[data-action]");
+  if (!button) return;
+
+  const reminder = state.bondReminders.find((item) => item.id === button.dataset.id);
+  if (!reminder) return;
+
+  if (button.dataset.action === "download-reminder-ics") {
+    downloadReminderIcs(reminder);
+    toast("Файл календаря скачан. Открой его в Apple Calendar.");
+  }
+
+  if (button.dataset.action === "delete-reminder") {
+    state.bondReminders = state.bondReminders.filter((item) => item.id !== reminder.id);
+    saveBondReminders();
+    renderBondReminders();
+    toast("Напоминание удалено.");
+  }
+}
+
+function findBasketBond(secid) {
+  return (state.bondBasket?.items || []).find((bond) => bond.secid === secid);
+}
+
+function buildBondReminder(bond) {
+  if (!bond?.reminder?.date) return null;
+
+  const title = bond.reminder.title || `Проверить облигацию ${bond.shortName || bond.name || bond.secid}`;
+  const details = [
+    bond.reminder.note,
+    `SECID: ${bond.secid}`,
+    `Количество в корзине: ${formatNumber(bond.quantity)} шт.`,
+    `Цена с НКД на момент подбора: ${formatMoney(bond.unitCost)}`,
+    `Окно ручного разбора: ${bond.reminder.date}${bond.reminder.windowEnd ? ` - ${bond.reminder.windowEnd}` : ""}`,
+    bond.buyWindow?.detail,
+    "Не является индивидуальной инвестиционной рекомендацией."
+  ].filter(Boolean);
+
+  return {
+    id: `bond-${bond.secid}-${bond.reminder.date}`,
+    secid: bond.secid,
+    shortName: bond.shortName || bond.name || bond.secid,
+    date: bond.reminder.date,
+    windowEnd: bond.reminder.windowEnd,
+    title,
+    description: details.join("\n"),
+    createdAt: new Date().toISOString()
+  };
+}
+
+function upsertBondReminder(reminder) {
+  state.bondReminders = [
+    reminder,
+    ...state.bondReminders.filter((item) => item.id !== reminder.id)
+  ].sort((a, b) => new Date(a.date) - new Date(b.date));
+  saveBondReminders();
+  renderBondReminders();
+}
+
+function renderBondReminders() {
+  if (!els.bondRemindersList) return;
+
+  if (!state.bondReminders.length) {
+    els.bondRemindersList.innerHTML = `<div class="empty-state">Сохрани напоминание из карточки облигации, затем экспортируй его в Apple Calendar.</div>`;
+    return;
+  }
+
+  els.bondRemindersList.innerHTML = state.bondReminders
+    .map(
+      (reminder) => `
+        <article class="reminder-item">
+          <div>
+            <span>${escapeHtml(reminder.secid)}</span>
+            <strong>${escapeHtml(reminder.shortName)}</strong>
+            <small>${formatDate(reminder.date)} · ${escapeHtml(reminder.title)}</small>
+          </div>
+          <button type="button" class="secondary-button" data-action="download-reminder-ics" data-id="${escapeHtml(reminder.id)}">
+            Apple Calendar
+          </button>
+          <button type="button" class="ghost-button" data-action="delete-reminder" data-id="${escapeHtml(reminder.id)}">
+            Удалить
+          </button>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function loadBondReminders() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(BOND_REMINDERS_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.filter((item) => item?.id && item?.date) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveBondReminders() {
+  try {
+    localStorage.setItem(BOND_REMINDERS_KEY, JSON.stringify(state.bondReminders));
+  } catch {
+    toast("Браузер не дал сохранить напоминание локально.");
+  }
+}
+
+function downloadReminderIcs(reminder) {
+  const content = buildReminderIcs(reminder);
+  const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${safeFileName(reminder.secid)}-${reminder.date}.ics`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function buildReminderIcs(reminder) {
+  const uid = `${reminder.id}@t-invest-companion`;
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//T-Invest Companion//Bond Reminder//RU",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${escapeIcs(uid)}`,
+    `DTSTAMP:${formatIcsTimestamp(new Date())}`,
+    `DTSTART:${formatIcsLocalDateTime(reminder.date, 9, 0)}`,
+    `DTEND:${formatIcsLocalDateTime(reminder.date, 9, 30)}`,
+    `SUMMARY:${escapeIcs(reminder.title)}`,
+    `DESCRIPTION:${escapeIcs(reminder.description)}`,
+    "BEGIN:VALARM",
+    "TRIGGER:-PT30M",
+    "ACTION:DISPLAY",
+    `DESCRIPTION:${escapeIcs(reminder.title)}`,
+    "END:VALARM",
+    "END:VEVENT",
+    "END:VCALENDAR"
+  ].join("\r\n");
 }
 
 function renderBondCards(bonds) {
@@ -867,6 +1056,27 @@ function escapeHtml(value = "") {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function escapeIcs(value = "") {
+  return String(value)
+    .replaceAll("\\", "\\\\")
+    .replaceAll("\n", "\\n")
+    .replaceAll(";", "\\;")
+    .replaceAll(",", "\\,");
+}
+
+function formatIcsTimestamp(date) {
+  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+}
+
+function formatIcsLocalDateTime(dateText, hour, minute) {
+  const compactDate = String(dateText).slice(0, 10).replaceAll("-", "");
+  return `${compactDate}T${String(hour).padStart(2, "0")}${String(minute).padStart(2, "0")}00`;
+}
+
+function safeFileName(value = "reminder") {
+  return String(value).replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+|-+$/g, "") || "reminder";
 }
 
 function setStatus(message, mode) {

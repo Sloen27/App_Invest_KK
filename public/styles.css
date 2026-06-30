@@ -628,6 +628,78 @@ textarea {
   font-size: 14px;
 }
 
+.basket-actions,
+.reminder-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+}
+
+.basket-actions {
+  background: rgba(13, 123, 103, 0.06);
+}
+
+.basket-actions > div,
+.reminder-item > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.basket-actions span,
+.basket-actions small,
+.reminder-item span,
+.reminder-item small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.basket-actions strong,
+.reminder-item strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.secondary-button {
+  border-color: var(--line);
+  background: #fff;
+  color: var(--brand-strong);
+}
+
+.secondary-button:hover {
+  background: var(--panel-soft);
+  box-shadow: none;
+}
+
+.ghost-button {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.ghost-button:hover {
+  background: rgba(186, 59, 70, 0.08);
+  color: var(--danger);
+  box-shadow: none;
+}
+
+.reminders-panel {
+  overflow: hidden;
+}
+
+.reminder-list {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px 16px;
+}
+
 .timing-ok {
   color: var(--good);
 }
@@ -736,6 +808,8 @@ textarea {
   .income-summary,
   .bond-action-summary,
   .basket-card-grid,
+  .basket-actions,
+  .reminder-item,
   .bond-controls,
   .bond-lists,
   .risk-notes {
@@ -767,6 +841,8 @@ textarea {
   .bond-action-summary,
   .basket-card-main,
   .basket-card-grid,
+  .basket-actions,
+  .reminder-item,
   .bond-controls,
   .bond-lists,
   .risk-notes {
