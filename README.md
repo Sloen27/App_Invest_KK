@@ -59,6 +59,8 @@ T_INVEST_TOKEN=read-only токен T-Invest
 APP_PASSWORD=длинный пароль для входа в приложение
 APP_SESSION_SECRET=длинная случайная строка
 T_INVEST_API_BASE=https://invest-public-api.tinkoff.ru/rest
+MOEX_ISS_BASE=https://iss.moex.com/iss
+MOEX_FETCH_TIMEOUT_MS=12000
 ```
 
 После деплоя открой URL Vercel, введи `APP_PASSWORD`, и приложение начнет дергать T-Invest API с backend-стороны.
@@ -91,5 +93,7 @@ POST /api/bonds/basket
 ```
 
 Данные MOEX могут быть неполными или задержанными. Если по выпуску нет расчетной доходности или купона, приложение показывает предупреждение и не маскирует это значение.
+
+На Vercel функции запускаются в European region `fra1`, чтобы уменьшить шанс таймаута до MOEX ISS. Если `iss.moex.com` временно недоступен из инфраструктуры Vercel, API вернет `503 MOEX_UNAVAILABLE`, а интерфейс покажет понятное сообщение вместо падения.
 
 Модуль не является индивидуальной инвестиционной рекомендацией и не добавляет кнопки покупки, продажи или выставления заявок.
