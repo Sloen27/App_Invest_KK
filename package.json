@@ -1,0 +1,14 @@
+{
+  "name": "t-invest-companion",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local web dashboard for T-Invest portfolio monitoring.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

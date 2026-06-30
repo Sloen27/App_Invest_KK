@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>T-Invest Companion</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="login-screen hidden" id="loginScreen">
+      <form class="login-box" id="loginForm">
+        <p class="eyebrow">Защищенный доступ</p>
+        <h1>T-Invest Companion</h1>
+        <label>
+          <span>Пароль приложения</span>
+          <input id="passwordInput" type="password" autocomplete="current-password" />
+        </label>
+        <button type="submit">Войти</button>
+        <p id="loginHint">Пароль задается переменной APP_PASSWORD.</p>
+      </form>
+    </div>
+
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Локальная панель</p>
+        <h1>T-Invest Companion</h1>
+      </div>
+      <div class="status" id="status">
+        <span class="status-dot"></span>
+        <span>Проверяю токен</span>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="toolbar" aria-label="Управление портфелем">
+        <label>
+          <span>Счет</span>
+          <select id="accountSelect"></select>
+        </label>
+        <button id="refreshButton" type="button">
+          <span aria-hidden="true">↻</span>
+          Обновить
+        </button>
+        <button id="incomeButton" type="button">
+          <span aria-hidden="true">¤</span>
+          Выплаты
+        </button>
+      </section>
+
+      <section class="summary-grid" aria-label="Сводка">
+        <article class="metric">
+          <span>Стоимость портфеля</span>
+          <strong id="totalAmount">—</strong>
+        </article>
+        <article class="metric">
+          <span>Ожидаемая доходность</span>
+          <strong id="yieldAmount">—</strong>
+        </article>
+        <article class="metric">
+          <span>Позиций</span>
+          <strong id="positionsCount">—</strong>
+        </article>
+        <article class="metric">
+          <span>Кэш</span>
+          <strong id="cashAmount">—</strong>
+        </article>
+      </section>
+
+      <section class="workbench">
+        <div class="panel positions-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Позиции</h2>
+              <p id="positionsMeta">Выбери счет, чтобы загрузить портфель</p>
+            </div>
+            <input id="positionFilter" type="search" placeholder="Фильтр" />
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Инструмент</th>
+                  <th>Тип</th>
+                  <th>Кол-во</th>
+                  <th>Цена</th>
+                  <th>Стоимость</th>
+                  <th>Доходность</th>
+                </tr>
+              </thead>
+              <tbody id="positionsBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <aside class="side-stack">
+          <section class="panel">
+            <div class="panel-head compact">
+              <h2>Структура</h2>
+            </div>
+            <canvas id="allocationCanvas" width="460" height="280"></canvas>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head compact">
+              <h2 id="chartTitle">График</h2>
+              <select id="chartDays">
+                <option value="30">30 дней</option>
+                <option value="90" selected>90 дней</option>
+                <option value="180">180 дней</option>
+                <option value="365">1 год</option>
+              </select>
+            </div>
+            <canvas id="priceCanvas" width="460" height="240"></canvas>
+          </section>
+        </aside>
+      </section>
+
+      <section class="lower-grid">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Ближайшие выплаты</h2>
+              <p id="incomeMeta">Купоны и дивиденды по текущему портфелю</p>
+            </div>
+          </div>
+          <div id="incomeList" class="income-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Контекст для Codex</h2>
+              <p>Сводка без токена, чтобы обсудить портфель здесь</p>
+            </div>
+            <button id="copyContextButton" type="button">Скопировать</button>
+          </div>
+          <textarea id="advisorContext" readonly></textarea>
+        </section>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
